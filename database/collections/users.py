@@ -1,6 +1,6 @@
 from bson.objectid import ObjectId
-from constants import users_collection
-from helpers import parse_json
+from database.constants.db_constants import users_collection
+from database.helpers.parse_json import parse_json
 import pprint
 
 printer = pprint.PrettyPrinter()

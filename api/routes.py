@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify
 from bson.json_util import dumps
 from json import loads
-from users import create_new_user, get_all_users, get_user_by_id, get_user_by_login, delete_user, update_user
+from database.collections.users import create_new_user, get_all_users, get_user_by_id, get_user_by_login, delete_user, update_user
 
 app = Flask (__name__)
 
