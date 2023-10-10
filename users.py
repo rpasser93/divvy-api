@@ -1,25 +1,9 @@
-from dotenv import load_dotenv, find_dotenv
-import os
-import pprint
-import certifi
-from pymongo import MongoClient
-from bson.json_util import dumps
-from json import loads
 from bson.objectid import ObjectId
-
-def parse_json(data):
- return loads(dumps(data, default=str))
+from constants import users_collection
+from helpers import parse_json
+import pprint
 
 printer = pprint.PrettyPrinter()
-
-load_dotenv(find_dotenv())
-password = os.environ.get('MONGODB_PWD')
-connection_string = f'mongodb+srv://rpasser93:{password}@divvy-cluster.zffibkx.mongodb.net/?retryWrites=true&w=majority'
-
-client = MongoClient(connection_string, tlsCAFile=certifi.where())
-divvy_db = client.divvy_db
-users_collection = divvy_db.users
-expenses_collection = divvy_db.expenses
 
 def create_new_user(login: str, password: str):
   new_user = {
