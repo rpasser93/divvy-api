@@ -1,6 +1,10 @@
 from bson.objectid import ObjectId
+
+import sys
+sys.path.append('.')
 from database.constants.db_constants import users_collection
 from database.helpers.parse_json import parse_json
+
 import pprint
 
 printer = pprint.PrettyPrinter()
@@ -44,3 +48,12 @@ def delete_user(id: str):
   user_json = parse_json(user)
   users_collection.delete_one({'_id': ObjectId(id)})
   return user_json
+
+def add_expense_for_user(user_id: str, expense_id: str):
+  return f'Adding expense {expense_id} to user {user_id}.'
+
+def update_expense_for_user(user_id: str, expense_id: str):
+  return f'Updating expense {expense_id} for user {user_id}.'
+
+def delete_expense_for_user(user_id: str, expense_id: str):
+  return f'Deleting expense {expense_id} from user {user_id}.'
