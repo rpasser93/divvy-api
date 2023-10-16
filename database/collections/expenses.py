@@ -1,26 +1,30 @@
 from bson.objectid import ObjectId
+
+from database.collections.users import add_expense_for_user
+
 from database.constants.db_constants import expenses_collection
 from database.constants.status_enums import Status
+from database.constants.access_enums import Access
 from database.helpers.parse_json import parse_json
-import pprint
 from datetime import datetime
 
-printer = pprint.PrettyPrinter()
-
-def create_new_expense(name: str, description: str, date_start: datetime, date_end: datetime):
+def create_new_expense(name: str, description: str, date_of_expense: datetime, creator_id: str):
   new_expense = {
     'name': name,
     'description': description,
-    'date_start': date_start,
-    'date_end': date_end,
-    'total_amount': None,
+    'date_of_expense': date_of_expense,
     'owed_party': [],
     'indebted_party': [],
     'status': Status.ACTIVE,
-    'date_created': datetime.now()
+    'history': [],
   }
   expenses_collection.insert_one(new_expense)
-  return parse_json(new_expense)
+
+  parsed_new_expense = parse_json(new_expense)
+  new_expense_id = parsed_new_expense['_id']['$oid']
+  add_expense_for_user(creator_id, new_expense_id, Access.CREATOR, Status.ACTIVE)
+  
+  return parsed_new_expense
 
 def get_all_expenses():
   expenses = expenses_collection.find({})
@@ -29,18 +33,49 @@ def get_all_expenses():
   }
   return all_expenses_dict
 
-def get_expense_by_id(expense_id: str):
+def get_expense_by_id(id: str):
   expense = expenses_collection.find({'_id': ObjectId(id)})
   return parse_json(expense)
 
-def update_expense(expense_id: str):
-  return f'Updating expense: {expense_id}.'
+def update_expense(id: str, values_to_update: dict):
+  new_values = {
+    '$set': values_to_update
+  }
+  expense_query = {'_id': ObjectId(id)}
+  expenses_collection.update_one(expense_query, new_values)
+  expense = expenses_collection.find(expense_query)
+  return parse_json(expense)
 
-def delete_expense(expense_id: str):
-  return f'Deleting expense: {expense_id}'
+def delete_expense(id: str):
+  expense = expenses_collection.find({'_id': ObjectId(id)})
+  expense_json = parse_json(expense)
+  expenses_collection.delete_one({'_id': ObjectId(id)})
+  return expense_json
 
-def complete_expense(expense_id: str):
-  return f'Closing expense: {expense_id}'
+def complete_expense(id: str):
+  new_status = {
+    '$set': {
+      'status': Status.PAID_UP
+    }
+  }
+  expense_query = {'_id': ObjectId(id)}
+  expenses_collection.update_one(expense_query, new_status)
+  expense = expenses_collection.find(expense_query)
+  return parse_json(expense)
+
+def reopen_expense(id: str):
+  new_status = {
+    '$set': {
+      'status': Status.ACTIVE
+    }
+  }
+  expense_query = {'_id': ObjectId(id)}
+  expenses_collection.update_one(expense_query, new_status)
+  expense = expenses_collection.find(expense_query)
+  return parse_json(expense)
+
+def add_expense_history(id: str, text: str):
+  return f'Updating history for expense: {id} with text: "{text}"'
 
 ##owed and indebted
 def add_owed_party(expense_id: str):

@@ -1,13 +1,9 @@
 from bson.objectid import ObjectId
 
-import sys
-sys.path.append('.')
-from database.constants.db_constants import users_collection
+from database.constants.db_constants import users_collection, expenses_collection
+from database.constants.status_enums import Status
+from database.constants.access_enums import Access
 from database.helpers.parse_json import parse_json
-
-import pprint
-
-printer = pprint.PrettyPrinter()
 
 def create_new_user(login: str, password: str):
   new_user = {
@@ -15,6 +11,7 @@ def create_new_user(login: str, password: str):
     'password': password,
     'first_name': None,
     'last_name': None,
+    'expenses': []
   }
   users_collection.insert_one(new_user)
   return parse_json(new_user)
@@ -49,8 +46,33 @@ def delete_user(id: str):
   users_collection.delete_one({'_id': ObjectId(id)})
   return user_json
 
-def add_expense_for_user(user_id: str, expense_id: str):
-  return f'Adding expense {expense_id} to user {user_id}.'
+def add_expense_for_user(user_id: str, expense_id: str, access_level: Access, status: Status):
+  user_query = {'_id': ObjectId(user_id)}
+  expense_query = {'_id': ObjectId(expense_id)}
+
+  user = users_collection.find(user_query)
+  expense = expenses_collection.find(expense_query)
+
+  parsed_user = parse_json(user)
+  parsed_expense = parse_json(expense)
+
+  if len(parsed_user) == 0:
+    return 'User with that ID does not exist.'
+  
+  if len(parsed_expense) == 0:
+    return 'Expense with that ID does not exist.'
+  
+  duplicate_expenses = parse_json(users_collection.find({'_id': ObjectId(user_id), 'expenses.id': expense_id}))
+  if len(duplicate_expenses) != 0:
+    return 'Expense has already been added for that user.'
+  
+  new_expense = {
+    'id': expense_id,
+    'access_level': access_level,
+    'status': status
+  }
+  users_collection.update_one(user_query, {'$push': {'expenses': new_expense}})
+  return
 
 def update_expense_for_user(user_id: str, expense_id: str):
   return f'Updating expense {expense_id} for user {user_id}.'
