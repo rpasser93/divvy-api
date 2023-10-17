@@ -6,6 +6,11 @@ from database.constants.access_enums import Access
 from database.helpers.parse_json import parse_json
 
 def create_new_user(login: str, password: str):
+
+  login_already_exists = len(get_user_by_login(login)) != 0
+  if login_already_exists:
+    return 'Login already exists.' 
+  
   new_user = {
     'login': login,
     'password': password,
@@ -25,7 +30,10 @@ def get_all_users():
 
 def get_user_by_id(id: str):
   user = users_collection.find({'_id': ObjectId(id)})
-  return parse_json(user)
+  parsed_user = parse_json(user)
+  if len(parsed_user) == 0:
+    return 'User with that id does not exist.'
+  return parsed_user[0]
 
 def get_user_by_login(login: str):
   user = users_collection.find({'login': login})
@@ -36,15 +44,25 @@ def update_user(id: str, values_to_update: dict):
     '$set': values_to_update
   }
   user_query = {'_id': ObjectId(id)}
-  users_collection.update_one(user_query, new_values)
   user = users_collection.find(user_query)
-  return parse_json(user)
+  parsed_user = parse_json(user)
+
+  if len(parsed_user) == 0:
+    return 'User with that id does not exist.'
+  
+  users_collection.update_one(user_query, new_values)
+  updated_user = parse_json(users_collection.find(user_query))
+  return updated_user[0]
 
 def delete_user(id: str):
   user = users_collection.find({'_id': ObjectId(id)})
-  user_json = parse_json(user)
+  parsed_user = parse_json(user)
+
+  if len(parsed_user) == 0:
+    return 'User with that id does not exist.'
+  
   users_collection.delete_one({'_id': ObjectId(id)})
-  return user_json
+  return parsed_user[0]
 
 def add_expense_for_user(user_id: str, expense_id: str, access_level: Access, status: Status):
   user_query = {'_id': ObjectId(user_id)}

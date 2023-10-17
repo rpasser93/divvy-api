@@ -24,10 +24,6 @@ def users():
   if request.method == 'POST':
    _login = _json['login']
    _password = _json['password']
-   
-   login_already_exists = len(get_user_by_login(_login)) != 0
-   if login_already_exists:
-    return 'Login already exists.' 
    return create_new_user(_login, _password)
   
   if request.method == 'GET':
@@ -38,35 +34,20 @@ def single_user(user_id):
   _json = request.json
 
   if request.method == 'GET':
-   user_with_id = get_user_by_id(user_id)
-   user_does_not_exist = len(user_with_id) == 0
-   if user_does_not_exist:
-    return 'User with that id does not exist.'
-   return user_with_id[0]
+   return get_user_by_id(user_id)
   
   if request.method == 'PUT':
    values_to_update = {}
-
    if 'password' in _json:
     values_to_update['password'] = _json['password']
    if 'first_name' in _json:
     values_to_update['first_name'] = _json['first_name']
    if 'last_name' in _json:
     values_to_update['last_name'] = _json['last_name']
-
-   updated_user = update_user(user_id, values_to_update)
-   user_does_not_exist = len(updated_user) == 0
-   if user_does_not_exist:
-    return 'User with that id does not exist.'
-   return updated_user[0]
+   return update_user(user_id, values_to_update)
   
   if request.method == 'DELETE':
-   deleted_user = delete_user(user_id)
-   user_does_not_exist = len(deleted_user) == 0
-   if user_does_not_exist:
-    return 'User with that id does not exist.'
-   return deleted_user[0]
-
+   return delete_user(user_id)
 
 @app.route('/users/<user_id>/expense/<expense_id>', methods=['POST', 'PUT', 'DELETE'])
 def user_expense(user_id, expense_id):
@@ -104,34 +85,20 @@ def single_expense(expense_id):
  _json = request.json
 
  if request.method == 'GET':
-  expense_with_id = get_expense_by_id(expense_id)
-  expense_does_not_exist = len(expense_with_id) == 0
-  if expense_does_not_exist:
-   return 'Expense with that id does not exist.'
-  return expense_with_id[0]
+  return get_expense_by_id(expense_id)
  
  if request.method == 'PUT':
   values_to_update = {}
-
   if 'name' in _json:
     values_to_update['name'] = _json['name']
   if 'description' in _json:
     values_to_update['description'] = _json['description']
   if 'date' in _json:
     values_to_update['date'] = _json['date']
-
-  updated_expense = update_expense(expense_id, values_to_update)
-  expense_does_not_exist = len(updated_expense) == 0
-  if expense_does_not_exist:
-    return 'Expense with that id does not exist.'
-  return updated_expense[0]
+  return update_expense(expense_id, values_to_update)
  
  if request.method == 'DELETE':
-  deleted_expense = delete_expense(expense_id)
-  expense_does_not_exist = len(deleted_expense) == 0
-  if expense_does_not_exist:
-   return 'Expense with that id does not exist.'
-  return deleted_expense[0]
+  return delete_expense(expense_id)
 
 @app.route('/expenses/<expense_id>/owed', methods=['POST', 'PUT', 'DELETE'])
 def expense_owed_party(expense_id):
@@ -159,19 +126,11 @@ def expense_indebted_party(expense_id):
   
 @app.route('/expenses/<expense_id>/complete', methods=['POST'])
 def expense_completed(expense_id):
-  completed_expense = complete_expense(expense_id)
-  expense_does_not_exist = len(completed_expense) == 0
-  if expense_does_not_exist:
-   return 'Expense with that id does not exist.'
-  return completed_expense[0]
+  return complete_expense(expense_id)
 
 @app.route('/expenses/<expense_id>/reopen', methods=['POST'])
 def expense_reopened(expense_id):
-  reopened_expense = reopen_expense(expense_id)
-  expense_does_not_exist = len(reopened_expense) == 0
-  if expense_does_not_exist:
-   return 'Expense with that id does not exist.'
-  return reopened_expense[0]
+  return reopen_expense(expense_id)
 
 @app.route('/expenses/<expense_id>/history', methods=['POST'])
 def expense_history_add(expense_id):

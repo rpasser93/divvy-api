@@ -19,11 +19,9 @@ def create_new_expense(name: str, description: str, date_of_expense: datetime, c
     'history': [],
   }
   expenses_collection.insert_one(new_expense)
-
   parsed_new_expense = parse_json(new_expense)
   new_expense_id = parsed_new_expense['_id']['$oid']
   add_expense_for_user(creator_id, new_expense_id, Access.CREATOR, Status.ACTIVE)
-  
   return parsed_new_expense
 
 def get_all_expenses():
@@ -35,23 +33,34 @@ def get_all_expenses():
 
 def get_expense_by_id(id: str):
   expense = expenses_collection.find({'_id': ObjectId(id)})
-  return parse_json(expense)
+  parsed_expense = parse_json(expense)
+  if len(parsed_expense) == 0:
+   return 'Expense with that id does not exist.'
+  return parsed_expense[0]
 
 def update_expense(id: str, values_to_update: dict):
   new_values = {
     '$set': values_to_update
   }
   expense_query = {'_id': ObjectId(id)}
-  expenses_collection.update_one(expense_query, new_values)
   expense = expenses_collection.find(expense_query)
-  return parse_json(expense)
+  parsed_expense = parse_json(expense)
+  if len(parsed_expense) == 0:
+   return 'Expense with that id does not exist.'
+  
+  expenses_collection.update_one(expense_query, new_values)
+  updated_expense = parse_json(expenses_collection.find(expense_query))
+  return updated_expense[0]
 
 def delete_expense(id: str):
   expense = expenses_collection.find({'_id': ObjectId(id)})
-  expense_json = parse_json(expense)
+  parsed_expense = parse_json(expense)
+  if len(parsed_expense) == 0:
+   return 'Expense with that id does not exist.'
+  
   expenses_collection.delete_one({'_id': ObjectId(id)})
   users_collection.update_many({'expenses.id': id}, {'$pull': {'expenses': {'id': id}}})
-  return expense_json
+  return parsed_expense[0]
 
 def complete_expense(id: str):
   expense_query = {'_id': ObjectId(id)}
@@ -60,10 +69,16 @@ def complete_expense(id: str):
       'status': Status.PAID_UP
     }
   }
+  expense = expenses_collection.find(expense_query)
+  parsed_expense = parse_json(expense)
+  if len(parsed_expense) == 0:
+   return 'Expense with that id does not exist.'
+  
   expenses_collection.update_one(expense_query, new_status)
   users_collection.update_many({'expenses.id': id},  {'$set': {'expenses.$.status': Status.PAID_UP}})
-  expense = expenses_collection.find(expense_query)
-  return parse_json(expense)
+  
+  updated_expense = parse_json(expenses_collection.find(expense_query))
+  return updated_expense[0]
 
 def reopen_expense(id: str):
   new_status = {
@@ -72,10 +87,16 @@ def reopen_expense(id: str):
     }
   }
   expense_query = {'_id': ObjectId(id)}
+  expense = expenses_collection.find(expense_query)
+  parsed_expense = parse_json(expense)
+  if len(parsed_expense) == 0:
+   return 'Expense with that id does not exist.'
+  
   expenses_collection.update_one(expense_query, new_status)
   users_collection.update_many({'expenses.id': id},  {'$set': {'expenses.$.status': Status.ACTIVE}})
-  expense = expenses_collection.find(expense_query)
-  return parse_json(expense)
+  
+  updated_expense = parse_json(expenses_collection.find(expense_query))
+  return updated_expense[0]
 
 def add_expense_history(id: str, text: str):
   return f'Updating history for expense: {id} with text: "{text}"'
