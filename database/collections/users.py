@@ -1,15 +1,15 @@
 from bson.objectid import ObjectId
-
 from database.constants.db_constants import users_collection, expenses_collection
 from database.constants.status_enums import Status
 from database.constants.access_enums import Access
 from database.helpers.parse_json import parse_json
+from flask import abort, Response
 
 def create_new_user(login: str, password: str):
 
   login_already_exists = len(get_user_by_login(login)) != 0
   if login_already_exists:
-    return 'Login already exists.' 
+    return abort(Response('Login already exists.', 400))
   
   new_user = {
     'login': login,
@@ -32,7 +32,7 @@ def get_user_by_id(id: str):
   user = users_collection.find({'_id': ObjectId(id)})
   parsed_user = parse_json(user)
   if len(parsed_user) == 0:
-    return 'User with that id does not exist.'
+    return abort(Response('User with that id does not exist.', 404))
   return parsed_user[0]
 
 def get_user_by_login(login: str):
@@ -48,7 +48,7 @@ def update_user(id: str, values_to_update: dict):
   parsed_user = parse_json(user)
 
   if len(parsed_user) == 0:
-    return 'User with that id does not exist.'
+    return abort(Response('User with that id does not exist.', 404))
   
   users_collection.update_one(user_query, new_values)
   updated_user = parse_json(users_collection.find(user_query))
@@ -59,7 +59,7 @@ def delete_user(id: str):
   parsed_user = parse_json(user)
 
   if len(parsed_user) == 0:
-    return 'User with that id does not exist.'
+    return abort(Response('User with that id does not exist.', 404))
   
   users_collection.delete_one({'_id': ObjectId(id)})
   return parsed_user[0]
@@ -75,14 +75,14 @@ def add_expense_for_user(user_id: str, expense_id: str, access_level: Access, st
   parsed_expense = parse_json(expense)
 
   if len(parsed_user) == 0:
-    return 'User with that ID does not exist.'
+    return abort(Response('User with that id does not exist.', 404))
   
   if len(parsed_expense) == 0:
-    return 'Expense with that ID does not exist.'
+    return abort(Response('Expense with that id does not exist.', 404))
   
   duplicate_expenses = parse_json(users_collection.find({'_id': ObjectId(user_id), 'expenses.id': expense_id}))
   if len(duplicate_expenses) != 0:
-    return 'Expense has already been added for that user.'
+    return abort(Response('Expense has already been added for that user.', 400))
   
   new_expense = {
     'id': expense_id,
@@ -104,10 +104,10 @@ def update_expense_access_for_user(user_id: str, expense_id: str, access_level: 
   parsed_expense = parse_json(expense)
 
   if len(parsed_user) == 0:
-    return 'User with that ID does not exist.'
+    return abort(Response('User with that id does not exist.', 404))
   
   if len(parsed_expense) == 0:
-    return 'Expense with that ID does not exist.'
+    return abort(Response('Expense with that id does not exist.', 404))
   
   users_collection.update_one({'_id': ObjectId(user_id), 'expenses.id': expense_id}, {'$set': {'expenses.$.access_level': access_level}})
   updated_user = parse_json(users_collection.find(user_query))
@@ -124,10 +124,10 @@ def delete_expense_for_user(user_id: str, expense_id: str):
   parsed_expense = parse_json(expense)
 
   if len(parsed_user) == 0:
-    return 'User with that ID does not exist.'
+    return abort(Response('User with that id does not exist.', 404))
   
   if len(parsed_expense) == 0:
-    return 'Expense with that ID does not exist.'
+    return abort(Response('Expense with that id does not exist.', 404))
   
   users_collection.update_one({'_id': ObjectId(user_id), 'expenses.id': expense_id}, {'$pull': {'expenses': {'id': expense_id}}})
   updated_user = parse_json(users_collection.find(user_query))

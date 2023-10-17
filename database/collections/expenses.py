@@ -1,12 +1,11 @@
 from bson.objectid import ObjectId
-
 from database.collections.users import add_expense_for_user
-
 from database.constants.db_constants import expenses_collection, users_collection
 from database.constants.status_enums import Status
 from database.constants.access_enums import Access
 from database.helpers.parse_json import parse_json
 from datetime import datetime
+from flask import abort, Response
 
 def create_new_expense(name: str, description: str, date_of_expense: datetime, creator_id: str):
   new_expense = {
@@ -35,7 +34,7 @@ def get_expense_by_id(id: str):
   expense = expenses_collection.find({'_id': ObjectId(id)})
   parsed_expense = parse_json(expense)
   if len(parsed_expense) == 0:
-   return 'Expense with that id does not exist.'
+   return abort(Response('Expense with that id does not exist.', 404))
   return parsed_expense[0]
 
 def update_expense(id: str, values_to_update: dict):
@@ -46,7 +45,7 @@ def update_expense(id: str, values_to_update: dict):
   expense = expenses_collection.find(expense_query)
   parsed_expense = parse_json(expense)
   if len(parsed_expense) == 0:
-   return 'Expense with that id does not exist.'
+   return abort(Response('Expense with that id does not exist.', 404))
   
   expenses_collection.update_one(expense_query, new_values)
   updated_expense = parse_json(expenses_collection.find(expense_query))
@@ -56,7 +55,7 @@ def delete_expense(id: str):
   expense = expenses_collection.find({'_id': ObjectId(id)})
   parsed_expense = parse_json(expense)
   if len(parsed_expense) == 0:
-   return 'Expense with that id does not exist.'
+   return abort(Response('Expense with that id does not exist.', 404))
   
   expenses_collection.delete_one({'_id': ObjectId(id)})
   users_collection.update_many({'expenses.id': id}, {'$pull': {'expenses': {'id': id}}})
@@ -72,7 +71,7 @@ def complete_expense(id: str):
   expense = expenses_collection.find(expense_query)
   parsed_expense = parse_json(expense)
   if len(parsed_expense) == 0:
-   return 'Expense with that id does not exist.'
+   return abort(Response('Expense with that id does not exist.', 404))
   
   expenses_collection.update_one(expense_query, new_status)
   users_collection.update_many({'expenses.id': id},  {'$set': {'expenses.$.status': Status.PAID_UP}})
@@ -90,11 +89,11 @@ def reopen_expense(id: str):
   expense = expenses_collection.find(expense_query)
   parsed_expense = parse_json(expense)
   if len(parsed_expense) == 0:
-   return 'Expense with that id does not exist.'
+   return abort(Response('Expense with that id does not exist.', 404))
   
   expenses_collection.update_one(expense_query, new_status)
   users_collection.update_many({'expenses.id': id},  {'$set': {'expenses.$.status': Status.ACTIVE}})
-  
+
   updated_expense = parse_json(expenses_collection.find(expense_query))
   return updated_expense[0]
 
