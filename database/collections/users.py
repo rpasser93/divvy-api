@@ -72,10 +72,45 @@ def add_expense_for_user(user_id: str, expense_id: str, access_level: Access, st
     'status': status
   }
   users_collection.update_one(user_query, {'$push': {'expenses': new_expense}})
-  return
+  updated_user = users_collection.find(user_query)
+  return parse_json(updated_user)[0]
 
-def update_expense_for_user(user_id: str, expense_id: str):
-  return f'Updating expense {expense_id} for user {user_id}.'
+def update_expense_access_for_user(user_id: str, expense_id: str, access_level: Access):
+  user_query = {'_id': ObjectId(user_id)}
+  expense_query = {'_id': ObjectId(expense_id)}
+
+  user = users_collection.find(user_query)
+  expense = expenses_collection.find(expense_query)
+
+  parsed_user = parse_json(user)
+  parsed_expense = parse_json(expense)
+
+  if len(parsed_user) == 0:
+    return 'User with that ID does not exist.'
+  
+  if len(parsed_expense) == 0:
+    return 'Expense with that ID does not exist.'
+  
+  users_collection.update_one({'_id': ObjectId(user_id), 'expenses.id': expense_id}, {'$set': {'expenses.$.access_level': access_level}})
+  updated_user = parse_json(users_collection.find(user_query))
+  return updated_user[0]
 
 def delete_expense_for_user(user_id: str, expense_id: str):
-  return f'Deleting expense {expense_id} from user {user_id}.'
+  user_query = {'_id': ObjectId(user_id)}
+  expense_query = {'_id': ObjectId(expense_id)}
+
+  user = users_collection.find(user_query)
+  expense = expenses_collection.find(expense_query)
+
+  parsed_user = parse_json(user)
+  parsed_expense = parse_json(expense)
+
+  if len(parsed_user) == 0:
+    return 'User with that ID does not exist.'
+  
+  if len(parsed_expense) == 0:
+    return 'Expense with that ID does not exist.'
+  
+  users_collection.update_one({'_id': ObjectId(user_id), 'expenses.id': expense_id}, {'$pull': {'expenses': {'id': expense_id}}})
+  updated_user = parse_json(users_collection.find(user_query))
+  return updated_user[0]

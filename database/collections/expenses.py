@@ -2,7 +2,7 @@ from bson.objectid import ObjectId
 
 from database.collections.users import add_expense_for_user
 
-from database.constants.db_constants import expenses_collection
+from database.constants.db_constants import expenses_collection, users_collection
 from database.constants.status_enums import Status
 from database.constants.access_enums import Access
 from database.helpers.parse_json import parse_json
@@ -50,16 +50,18 @@ def delete_expense(id: str):
   expense = expenses_collection.find({'_id': ObjectId(id)})
   expense_json = parse_json(expense)
   expenses_collection.delete_one({'_id': ObjectId(id)})
+  users_collection.update_many({'expenses.id': id}, {'$pull': {'expenses': {'id': id}}})
   return expense_json
 
 def complete_expense(id: str):
+  expense_query = {'_id': ObjectId(id)}
   new_status = {
     '$set': {
       'status': Status.PAID_UP
     }
   }
-  expense_query = {'_id': ObjectId(id)}
   expenses_collection.update_one(expense_query, new_status)
+  users_collection.update_many({'expenses.id': id},  {'$set': {'expenses.$.status': Status.PAID_UP}})
   expense = expenses_collection.find(expense_query)
   return parse_json(expense)
 
@@ -71,6 +73,7 @@ def reopen_expense(id: str):
   }
   expense_query = {'_id': ObjectId(id)}
   expenses_collection.update_one(expense_query, new_status)
+  users_collection.update_many({'expenses.id': id},  {'$set': {'expenses.$.status': Status.ACTIVE}})
   expense = expenses_collection.find(expense_query)
   return parse_json(expense)
 
