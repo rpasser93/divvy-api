@@ -3,16 +3,18 @@ from database.collections.users import add_expense_for_user
 from database.constants.db_constants import expenses_collection, users_collection
 from database.constants.status_enums import Status
 from database.constants.access_enums import Access
+from database.constants.split_type_enums import Split
 from database.helpers.parse_json import parse_json
 from datetime import datetime
 from uuid import uuid4
 from flask import abort, Response
 
-def create_new_expense(name: str, description: str, date_of_expense: datetime, creator_id: str):
+def create_new_expense(name: str, description: str, date_of_expense: datetime, split_by: Split, creator_id: str):
   new_expense = {
     'name': name,
     'description': description,
     'date_of_expense': date_of_expense,
+    'split_by': split_by,
     'owed_party': [],
     'indebted_party': [],
     'status': Status.ACTIVE,
@@ -61,6 +63,17 @@ def delete_expense(id: str):
   expenses_collection.delete_one({'_id': ObjectId(id)})
   users_collection.update_many({'expenses.id': id}, {'$pull': {'expenses': {'id': id}}})
   return parsed_expense[0]
+
+def update_expense_split(id: str, split_by: Split):
+  expense_query = {'_id': ObjectId(id)}
+  expense = expenses_collection.find(expense_query)
+  parsed_expense = parse_json(expense)
+  if len(parsed_expense) == 0:
+   return abort(Response('Expense with that id does not exist.', 404))
+  
+  expenses_collection.update_one(expense_query, {'$set': {'split_by': split_by}})
+  updated_expense = parse_json(expenses_collection.find(expense_query))
+  return updated_expense[0]
 
 def complete_expense(id: str):
   expense_query = {'_id': ObjectId(id)}

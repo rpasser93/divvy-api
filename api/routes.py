@@ -5,7 +5,7 @@ from json import loads
 import sys
 sys.path.append('.')
 from database.collections.users import create_new_user, get_all_users, get_user_by_id, delete_user, update_user, add_expense_for_user, update_expense_access_for_user, delete_expense_for_user
-from database.collections.expenses import create_new_expense, get_all_expenses, get_expense_by_id, update_expense, delete_expense, complete_expense, reopen_expense, add_owed_party, update_owed_party, delete_owed_party, add_indebted_party, update_indebted_party, delete_indebted_party, add_expense_history
+from database.collections.expenses import create_new_expense, get_all_expenses, get_expense_by_id, update_expense, delete_expense, update_expense_split, complete_expense, reopen_expense, add_owed_party, update_owed_party, delete_owed_party, add_indebted_party, update_indebted_party, delete_indebted_party, add_expense_history
 
 app = Flask (__name__)
 
@@ -74,8 +74,9 @@ def expenses():
   _name = _json['name']
   _description = _json['description']
   _date_of_expense = _json['date_of_expense']
+  _split_by = _json['split_by']
   _creator_id = _json['creator_id']
-  return create_new_expense(_name, _description, _date_of_expense, _creator_id)
+  return create_new_expense(_name, _description, _date_of_expense, _split_by, _creator_id)
  
  if request.method == 'GET':
   return get_all_expenses()
@@ -153,6 +154,12 @@ def expense_indebted_party(expense_id):
   if request.method == 'DELETE':
    _member_uuid = _json['member_uuid']
    return delete_indebted_party(expense_id, _member_uuid)
+  
+@app.route('/expenses/<expense_id>/split', methods=['PUT'])
+def expense_split(expense_id):
+  _json = request.json
+  _split_by = _json['split_by']
+  return update_expense_split(expense_id, _split_by)
   
 @app.route('/expenses/<expense_id>/complete', methods=['POST'])
 def expense_completed(expense_id):
