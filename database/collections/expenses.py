@@ -9,11 +9,11 @@ from datetime import datetime
 from uuid import uuid4
 from flask import abort, Response
 
-def create_new_expense(name: str, description: str, date_of_expense: datetime, split_by: Split, creator_id: str):
+def create_new_expense(name: str, description: str, date: datetime, split_by: Split, creator_id: str):
   new_expense = {
     'name': name,
     'description': description,
-    'date_of_expense': date_of_expense,
+    'date': date,
     'split_by': split_by,
     'owed_party': [],
     'indebted_party': [],
@@ -54,11 +54,15 @@ def update_expense(id: str, values_to_update: dict):
   expenses_collection.update_one(expense_query, new_values)
 
   if 'name' in values_to_update:
-    add_expense_history(id, f'Expense name changed to: {values_to_update['name']}.')
+    add_expense_history(id, f'Expense name changed from {parsed_expense[0]['name']} to {values_to_update['name']}.')
   if 'description' in values_to_update:
-    add_expense_history(id, f'Expense description changed to: {values_to_update['description']}.')
+    add_expense_history(id, f'Expense description changed from {parsed_expense[0]['description']} to {values_to_update['description']}.')
   if 'date' in values_to_update:
-    add_expense_history(id, f'Expense date changed to: {values_to_update['date']}.')
+    old_datetime = datetime.strptime(parsed_expense[0]['date'], '%Y-%d-%mT%H:%M:%S.%fZ')
+    new_datetime = datetime.strptime(values_to_update['date'], '%Y-%d-%mT%H:%M:%S.%fZ')
+    old_date_string = old_datetime.strftime('%b %d, %Y')
+    new_date_string = new_datetime.strftime('%b %d, %Y')
+    add_expense_history(id, f'Expense date changed from {old_date_string} to {new_date_string}.')
 
   updated_expense = parse_json(expenses_collection.find(expense_query))
   return updated_expense[0]
@@ -151,7 +155,7 @@ def add_owed_party(id: str, first_name: str, last_name: str, amount_owed: float)
   }
   expenses_collection.update_one(expense_query, {'$push': {'owed_party': new_owed_party}})
 
-  add_expense_history(id, f'{first_name} {last_name} added - owed ${amount_owed}.')
+  add_expense_history(id, f'{first_name} {last_name} added to expense - owed ${amount_owed}.')
 
   updated_expense = parse_json(expenses_collection.find(expense_query))
   return updated_expense[0]
@@ -180,9 +184,9 @@ def update_owed_party(expense_id: str, uuid: str, values_to_update: dict):
   for member in owed_party:
     if member['uuid'] == uuid:
       if 'first_name' in values_to_update or 'last_name' in values_to_update:
-        final_first_name = values_to_update['first_name'] if 'first_name' in values_to_update else member['first_name']
-        final_last_name = values_to_update['last_name'] if 'last_name' in values_to_update else member['last_name']
-        add_expense_history(expense_id, f'Changed member name in Owed list from {member['first_name']} {member['last_name']} to {final_first_name} {final_last_name}.')
+        first_name_string = values_to_update['first_name'] if 'first_name' in values_to_update else member['first_name']
+        last_name_string = values_to_update['last_name'] if 'last_name' in values_to_update else member['last_name']
+        add_expense_history(expense_id, f'Changed member name in Owed list from {member['first_name']} {member['last_name']} to {first_name_string} {last_name_string}.')
       if 'amount_owed' in values_to_update:
         add_expense_history(expense_id, f'Changed amount owed for {member['first_name']} {member['last_name']} to ${values_to_update['amount_owed']}.')
       if 'amount_received' in values_to_update:
@@ -236,7 +240,7 @@ def add_indebted_party(id: str, first_name: str, last_name: str, amount_owes: fl
   }
   expenses_collection.update_one(expense_query, {'$push': {'indebted_party': new_indebted_party}})
 
-  add_expense_history(id, f'{first_name} {last_name} added - owes ${amount_owes}.')
+  add_expense_history(id, f'{first_name} {last_name} added to expense - owes ${amount_owes}.')
 
   updated_expense = parse_json(expenses_collection.find(expense_query))
   return updated_expense[0]

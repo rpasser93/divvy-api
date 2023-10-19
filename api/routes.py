@@ -80,10 +80,10 @@ def expenses():
  if request.method == 'POST':
   _name = _json['name']
   _description = _json['description']
-  _date_of_expense = _json['date_of_expense']
+  _date = _json['date']
   _split_by = _json['split_by']
   _creator_id = _json['creator_id']
-  return create_new_expense(_name, _description, _date_of_expense, _split_by, _creator_id)
+  return create_new_expense(_name, _description, _date, _split_by, _creator_id)
  
  if request.method == 'GET':
   return get_all_expenses()
