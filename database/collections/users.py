@@ -38,7 +38,6 @@ def get_all_users():
     'users': parse_json(users)
   }
   for user in all_users_dict['users']:
-    print(user)
     if 'password' in user:
       del user['password']
 
