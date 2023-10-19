@@ -4,7 +4,7 @@ from json import loads
 
 import sys
 sys.path.append('.')
-from database.collections.users import create_new_user, get_all_users, get_user_by_id, delete_user, update_user, add_expense_for_user, update_expense_access_for_user, delete_expense_for_user
+from database.collections.users import login, create_new_user, get_all_users, get_user_by_id, delete_user, update_user, add_expense_for_user, update_expense_access_for_user, delete_expense_for_user
 from database.collections.expenses import create_new_expense, get_all_expenses, get_expense_by_id, update_expense, delete_expense, update_expense_split, complete_expense, reopen_expense, add_owed_party, update_owed_party, delete_owed_party, add_indebted_party, update_indebted_party, delete_indebted_party, add_expense_history
 
 app = Flask (__name__)
@@ -17,6 +17,13 @@ def home():
   return 'Connected to Divvy API.'
 
 ##Users
+@app.route('/login', methods=['POST'])
+def attempt_to_login():
+ _json = request.json
+ _login = _json['login']
+ _password = _json['password']
+ return login(_login, _password)
+
 @app.route('/users', methods=['GET', 'POST'])
 def users():
   _json = request.json
@@ -172,7 +179,6 @@ def expense_reopened(expense_id):
 @app.route('/expenses/<expense_id>/history', methods=['POST'])
 def expense_history_add(expense_id):
  _json = request.json
-
  text = _json['text']
  return add_expense_history(expense_id, text)
 

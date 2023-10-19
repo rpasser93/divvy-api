@@ -5,11 +5,20 @@ from database.constants.access_enums import Access
 from database.helpers.parse_json import parse_json
 from flask import abort, Response
 
+def login(login: str, password: str):
+  registered_user = users_collection.find({'login': login, 'password': password})
+  parsed_registered_user = parse_json(registered_user)
+  if len(parsed_registered_user) == 0:
+    return abort(Response('Invalid login name or password.', 400))
+  
+  return f'User {login} logged in.'
+  
+
 def create_new_user(login: str, password: str):
 
   login_already_exists = len(get_user_by_login(login)) != 0
   if login_already_exists:
-    return abort(Response('Login already exists.', 400))
+    return abort(Response('That login name already exists.', 400))
   
   new_user = {
     'login': login,
@@ -19,13 +28,20 @@ def create_new_user(login: str, password: str):
     'expenses': []
   }
   users_collection.insert_one(new_user)
-  return parse_json(new_user)
+  parsed_user = parse_json(new_user)
+  del parsed_user['password']
+  return parsed_user
 
 def get_all_users():
   users = users_collection.find({})
   all_users_dict = {
     'users': parse_json(users)
   }
+  for user in all_users_dict['users']:
+    print(user)
+    if 'password' in user:
+      del user['password']
+
   return all_users_dict
 
 def get_user_by_id(id: str):
@@ -33,11 +49,13 @@ def get_user_by_id(id: str):
   parsed_user = parse_json(user)
   if len(parsed_user) == 0:
     return abort(Response('User with that id does not exist.', 404))
+  del parsed_user[0]['password']
   return parsed_user[0]
 
 def get_user_by_login(login: str):
   user = users_collection.find({'login': login})
-  return parse_json(user)
+  parsed_user = parse_json(user)
+  return parsed_user
 
 def update_user(id: str, values_to_update: dict):
   new_values = {
@@ -52,6 +70,7 @@ def update_user(id: str, values_to_update: dict):
   
   users_collection.update_one(user_query, new_values)
   updated_user = parse_json(users_collection.find(user_query))
+  del updated_user[0]['password']
   return updated_user[0]
 
 def delete_user(id: str):
@@ -62,6 +81,7 @@ def delete_user(id: str):
     return abort(Response('User with that id does not exist.', 404))
   
   users_collection.delete_one({'_id': ObjectId(id)})
+  del parsed_user[0]['password']
   return parsed_user[0]
 
 def add_expense_for_user(user_id: str, expense_id: str, access_level: Access, status: Status):
@@ -91,7 +111,9 @@ def add_expense_for_user(user_id: str, expense_id: str, access_level: Access, st
   }
   users_collection.update_one(user_query, {'$push': {'expenses': new_expense}})
   updated_user = users_collection.find(user_query)
-  return parse_json(updated_user)[0]
+  parsed_updated_user = parse_json(updated_user)
+  del parsed_updated_user[0]['password']
+  return parsed_updated_user[0]
 
 def update_expense_access_for_user(user_id: str, expense_id: str, access_level: Access):
   user_query = {'_id': ObjectId(user_id)}
@@ -111,7 +133,9 @@ def update_expense_access_for_user(user_id: str, expense_id: str, access_level: 
   
   users_collection.update_one({'_id': ObjectId(user_id), 'expenses.id': expense_id}, {'$set': {'expenses.$.access_level': access_level}})
   updated_user = parse_json(users_collection.find(user_query))
-  return updated_user[0]
+  parsed_updated_user = parse_json(updated_user)
+  del parsed_updated_user[0]['password']
+  return parsed_updated_user[0]
 
 def delete_expense_for_user(user_id: str, expense_id: str):
   user_query = {'_id': ObjectId(user_id)}
@@ -131,4 +155,6 @@ def delete_expense_for_user(user_id: str, expense_id: str):
   
   users_collection.update_one({'_id': ObjectId(user_id), 'expenses.id': expense_id}, {'$pull': {'expenses': {'id': expense_id}}})
   updated_user = parse_json(users_collection.find(user_query))
-  return updated_user[0]
+  parsed_updated_user = parse_json(updated_user)
+  del parsed_updated_user[0]['password']
+  return parsed_updated_user[0]

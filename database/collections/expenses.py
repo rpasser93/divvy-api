@@ -24,6 +24,7 @@ def create_new_expense(name: str, description: str, date_of_expense: datetime, s
   parsed_new_expense = parse_json(new_expense)
   new_expense_id = parsed_new_expense['_id']['$oid']
   add_expense_for_user(creator_id, new_expense_id, Access.CREATOR, Status.ACTIVE)
+  add_expense_history(new_expense_id, 'Expense created.')
   return parsed_new_expense
 
 def get_all_expenses():
@@ -51,6 +52,14 @@ def update_expense(id: str, values_to_update: dict):
    return abort(Response('Expense with that id does not exist.', 404))
   
   expenses_collection.update_one(expense_query, new_values)
+
+  if 'name' in values_to_update:
+    add_expense_history(id, f'Expense name changed to: {values_to_update['name']}.')
+  if 'description' in values_to_update:
+    add_expense_history(id, f'Expense description changed to: {values_to_update['description']}.')
+  if 'date' in values_to_update:
+    add_expense_history(id, f'Expense date changed to: {values_to_update['date']}.')
+
   updated_expense = parse_json(expenses_collection.find(expense_query))
   return updated_expense[0]
 
@@ -72,6 +81,9 @@ def update_expense_split(id: str, split_by: Split):
    return abort(Response('Expense with that id does not exist.', 404))
   
   expenses_collection.update_one(expense_query, {'$set': {'split_by': split_by}})
+
+  add_expense_history(id, f'Expense splitting changed to Divvy by {split_by}.')
+  
   updated_expense = parse_json(expenses_collection.find(expense_query))
   return updated_expense[0]
 
@@ -89,7 +101,9 @@ def complete_expense(id: str):
   
   expenses_collection.update_one(expense_query, new_status)
   users_collection.update_many({'expenses.id': id},  {'$set': {'expenses.$.status': Status.PAID_UP}})
-  
+
+  add_expense_history(id, 'Expense paid up and closed.')
+
   updated_expense = parse_json(expenses_collection.find(expense_query))
   return updated_expense[0]
 
@@ -107,6 +121,8 @@ def reopen_expense(id: str):
   
   expenses_collection.update_one(expense_query, new_status)
   users_collection.update_many({'expenses.id': id},  {'$set': {'expenses.$.status': Status.ACTIVE}})
+
+  add_expense_history(id, 'Expense reopened.')
 
   updated_expense = parse_json(expenses_collection.find(expense_query))
   return updated_expense[0]
@@ -134,6 +150,9 @@ def add_owed_party(id: str, first_name: str, last_name: str, amount_owed: float)
     'amount_received': 0.00
   }
   expenses_collection.update_one(expense_query, {'$push': {'owed_party': new_owed_party}})
+
+  add_expense_history(id, f'{first_name} {last_name} added - owed ${amount_owed}.')
+
   updated_expense = parse_json(expenses_collection.find(expense_query))
   return updated_expense[0]
 
@@ -156,6 +175,19 @@ def update_owed_party(expense_id: str, uuid: str, values_to_update: dict):
     updated_values['owed_party.$.amount_received'] = float(values_to_update['amount_received'])
 
   expenses_collection.update_one(expense_query, {'$set': updated_values })
+
+  owed_party = parsed_expense[0]['owed_party']
+  for member in owed_party:
+    if member['uuid'] == uuid:
+      if 'first_name' in values_to_update or 'last_name' in values_to_update:
+        final_first_name = values_to_update['first_name'] if 'first_name' in values_to_update else member['first_name']
+        final_last_name = values_to_update['last_name'] if 'last_name' in values_to_update else member['last_name']
+        add_expense_history(expense_id, f'Changed member name in Owed list from {member['first_name']} {member['last_name']} to {final_first_name} {final_last_name}.')
+      if 'amount_owed' in values_to_update:
+        add_expense_history(expense_id, f'Changed amount owed for {member['first_name']} {member['last_name']} to ${values_to_update['amount_owed']}.')
+      if 'amount_received' in values_to_update:
+        add_expense_history(expense_id, f'Updated amount received for {member['first_name']} {member['last_name']} to ${values_to_update['amount_received']}.')
+
   updated_expense = parse_json(expenses_collection.find(expense_query))
   return updated_expense[0]
 
@@ -173,6 +205,10 @@ def delete_owed_party(expense_id: str, uuid: str):
    return abort(Response('Owed member with that uuid does not exist within expense.', 404))
   
   expenses_collection.update_one({'_id': ObjectId(expense_id), 'owed_party.uuid': uuid}, {'$pull': {'owed_party': {'uuid': uuid}}})
+  owed_party = parsed_expense[0]['owed_party']
+  for member in owed_party:
+    if member['uuid'] == uuid:
+      add_expense_history(expense_id, f'{member['first_name']} {member['last_name']} deleted from list of Owed members.')
   updated_expense = parse_json(expenses_collection.find(expense_query))
   return updated_expense[0]
 
@@ -199,6 +235,9 @@ def add_indebted_party(id: str, first_name: str, last_name: str, amount_owes: fl
     'amount_paid': 0.00
   }
   expenses_collection.update_one(expense_query, {'$push': {'indebted_party': new_indebted_party}})
+
+  add_expense_history(id, f'{first_name} {last_name} added - owes ${amount_owes}.')
+
   updated_expense = parse_json(expenses_collection.find(expense_query))
   return updated_expense[0]
 
@@ -221,6 +260,19 @@ def update_indebted_party(expense_id: str, uuid: str, values_to_update: dict):
     updated_values['indebted_party.$.amount_paid'] = float(values_to_update['amount_paid'])
 
   expenses_collection.update_one(expense_query, {'$set': updated_values })
+
+  indebted_party = parsed_expense[0]['indebted_party']
+  for member in indebted_party:
+    if member['uuid'] == uuid:
+      if 'first_name' in values_to_update or 'last_name' in values_to_update:
+        final_first_name = values_to_update['first_name'] if 'first_name' in values_to_update else member['first_name']
+        final_last_name = values_to_update['last_name'] if 'last_name' in values_to_update else member['last_name']
+        add_expense_history(expense_id, f'Changed member name in Owing list from {member['first_name']} {member['last_name']} to {final_first_name} {final_last_name}.')
+      if 'amount_owes' in values_to_update:
+        add_expense_history(expense_id, f'Changed amount {member['first_name']} {member['last_name']} owes to ${values_to_update['amount_owes']}.')
+      if 'amount_paid' in values_to_update:
+        add_expense_history(expense_id, f'Updated amount paid for {member['first_name']} {member['last_name']} to ${values_to_update['amount_paid']}.')
+
   updated_expense = parse_json(expenses_collection.find(expense_query))
   return updated_expense[0]
 
@@ -238,8 +290,24 @@ def delete_indebted_party(expense_id: str, uuid: str):
    return abort(Response('Indebted member with that uuid does not exist within expense.', 404))
   
   expenses_collection.update_one({'_id': ObjectId(expense_id), 'indebted_party.uuid': uuid}, {'$pull': {'indebted_party': {'uuid': uuid}}})
+  indebted_party = parsed_expense[0]['indebted_party']
+  for member in indebted_party:
+    if member['uuid'] == uuid:
+      add_expense_history(expense_id, f'{member['first_name']} {member['last_name']} deleted from list of Owing members.')
   updated_expense = parse_json(expenses_collection.find(expense_query))
   return updated_expense[0]
 
 def add_expense_history(id: str, text: str):
-  return f'Updating history for expense: {id} with text: "{text}"\n-{datetime.now()}'
+  expense_query = {'_id': ObjectId(id)}
+  expense = expenses_collection.find(expense_query)
+  parsed_expense = parse_json(expense)
+  if len(parsed_expense) == 0:
+   return abort(Response('Expense with that id does not exist.', 404))
+  
+  history_object = {
+    'text': text,
+    'datetime': str(datetime.now())
+  }
+  expenses_collection.update_one(expense_query, {'$push': {'history': history_object}})
+  updated_expense = parse_json(expenses_collection.find(expense_query))
+  return updated_expense[0]
