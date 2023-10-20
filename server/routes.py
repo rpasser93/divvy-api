@@ -1,16 +1,12 @@
 from flask import Flask, request
-from bson.json_util import dumps
-from json import loads
-
+from dotenv import load_dotenv, find_dotenv
+import os
 import sys
 sys.path.append('.')
 from database.collections.users import login, create_new_user, get_all_users, get_user_by_id, delete_user, update_user, add_expense_for_user, update_expense_access_for_user, delete_expense_for_user
 from database.collections.expenses import create_new_expense, get_all_expenses, get_expense_by_id, update_expense, delete_expense, update_expense_split, complete_expense, reopen_expense, add_owed_party, update_owed_party, delete_owed_party, add_indebted_party, update_indebted_party, delete_indebted_party, add_expense_history
 
 app = Flask (__name__)
-
-def parse_json(data):
- return loads(dumps(data, default=str))
 
 @app.route('/')
 def home():
@@ -181,6 +177,8 @@ def expense_history_add(expense_id):
  _json = request.json
  text = _json['text']
  return add_expense_history(expense_id, text)
-
+ 
 if __name__ == '__main__':
-  app.run(debug=True)
+  load_dotenv(find_dotenv())
+  host_ip = os.environ.get('HOST_IP')
+  app.run(host=host_ip, debug=True)
