@@ -9,7 +9,7 @@ def login(login: str, password: str):
   registered_user = users_collection.find({'login': login, 'password': password})
   parsed_registered_user = parse_json(registered_user)
   if len(parsed_registered_user) == 0:
-    return abort(Response('Invalid login name or password.', 400))
+    return abort(Response('Invalid login name or password.', 401))
   
   return f'User {login} logged in.'
   
