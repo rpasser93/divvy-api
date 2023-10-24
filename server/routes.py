@@ -16,18 +16,18 @@ def home():
 @app.route('/login', methods=['POST'])
 def attempt_to_login():
  _json = request.json
- _login = _json['login']
+ _username = _json['username']
  _password = _json['password']
- return login(_login, _password)
+ return login(_username, _password)
 
 @app.route('/users', methods=['GET', 'POST'])
 def users():
   _json = request.json
   
   if request.method == 'POST':
-   _login = _json['login']
+   _username = _json['username']
    _password = _json['password']
-   return create_new_user(_login, _password)
+   return create_new_user(_username, _password)
   
   if request.method == 'GET':
    return get_all_users()

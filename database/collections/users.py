@@ -5,23 +5,24 @@ from database.constants.access_enums import Access
 from database.helpers.parse_json import parse_json
 from flask import abort, Response
 
-def login(login: str, password: str):
-  registered_user = users_collection.find({'login': login, 'password': password})
+def login(username: str, password: str):
+  registered_user = users_collection.find({'username': username, 'password': password})
   parsed_registered_user = parse_json(registered_user)
   if len(parsed_registered_user) == 0:
-    return abort(Response('Invalid login name or password.', 401))
+    return abort(Response('Invalid username or password.', 401))
   
-  return f'User {login} logged in.'
+  del parsed_registered_user[0]['password']
+  return parsed_registered_user[0]
   
 
-def create_new_user(login: str, password: str):
+def create_new_user(username: str, password: str):
 
-  login_already_exists = len(get_user_by_login(login)) != 0
-  if login_already_exists:
-    return abort(Response('That login name already exists.', 400))
+  username_already_exists = len(get_user_by_login(username)) != 0
+  if username_already_exists:
+    return abort(Response('That username already exists.', 400))
   
   new_user = {
-    'login': login,
+    'username': username,
     'password': password,
     'first_name': None,
     'last_name': None,
@@ -51,8 +52,8 @@ def get_user_by_id(id: str):
   del parsed_user[0]['password']
   return parsed_user[0]
 
-def get_user_by_login(login: str):
-  user = users_collection.find({'login': login})
+def get_user_by_login(username: str):
+  user = users_collection.find({'username': username})
   parsed_user = parse_json(user)
   return parsed_user
 
